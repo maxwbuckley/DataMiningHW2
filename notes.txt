@@ -1,6 +1,10 @@
 Notes for Football Data
 
-All data is in csv format, ready for use within standard spreadsheet applications. Please note that some abbreviations are no longer in use (in particular odds from specific bookmakers no longer used) and refer to data collected in earlier seasons. For a current list of what bookmakers are included in the dataset please visit http://www.football-data.co.uk/matches.php
+All data is in csv format, ready for use within standard spreadsheet
+applications. Please note that some abbreviations are no longer in use (in
+particular odds from specific bookmakers no longer used) and refer to data
+collected in earlier seasons. For a current list of what bookmakers are included
+in the dataset please visit http://www.football-data.co.uk/matches.php
 
 Key to results data:
 
@@ -79,7 +83,8 @@ WHH = William Hill home win odds
 WHD = William Hill draw odds
 WHA = William Hill away win odds
 
-Bb1X2 = Number of BetBrain bookmakers used to calculate match odds averages and maximums
+Bb1X2 = Number of BetBrain bookmakers used to calculate match odds averages and
+  maximums
 BbMxH = Betbrain maximum home win odds
 BbAvH = Betbrain average home win odds
 BbMxD = Betbrain maximum draw odds
@@ -91,7 +96,8 @@ BbAvA = Betbrain average away win odds
 
 Key to total goals betting odds:
 
-BbOU = Number of BetBrain bookmakers used to calculate over/under 2.5 goals (total goals) averages and maximums
+BbOU = Number of BetBrain bookmakers used to calculate over/under 2.5 goals
+(total goals) averages and maximums
 BbMx>2.5 = Betbrain maximum over 2.5 goals
 BbAv>2.5 = Betbrain average over 2.5 goals
 BbMx<2.5 = Betbrain maximum under 2.5 goals
@@ -105,7 +111,8 @@ B365<2.5 = Bet365 under 2.5 goals
 
 Key to Asian handicap betting odds:
 
-BbAH = Number of BetBrain bookmakers used to Asian handicap averages and maximums
+BbAH = Number of BetBrain bookmakers used to Asian handicap averages and
+  maximums
 BbAHh = Betbrain size of handicap (home team)
 BbMxAHH = Betbrain maximum Asian handicap home team odds
 BbAvAHH = Betbrain average Asian handicap home team odds
@@ -122,7 +129,8 @@ B365AHH = Bet365 Asian handicap home team odds
 B365AHA = Bet365 Asian handicap away team odds
 B365AH = Bet365 size of handicap (home team)
 
-Football-Data would like to acknowledge the following sources which have been utilised in the compilation of Football-Data's results and odds files.
+Football-Data would like to acknowledge the following sources which have been
+utilised in the compilation of Football-Data's results and odds files.
 
 Historical results:
 International Soccer Server - http://sunsite.tut.fi/rec/riku/soccer.html
@@ -140,7 +148,10 @@ Bookmakers betting odds
 Betbrain - http://www.betbrain.com
 Betbase - http://www.betbase.info
 
-Betting odds for weekend games are collected Friday afternoons, and on Tuesday afternoons for midweek games.
+Betting odds for weekend games are collected Friday afternoons, and on Tuesday
+afternoons for midweek games.
 
-Additional match statistics (corners, shots, bookings, referee etc.) for the 2000/01 and 2001/02 seasons for the English, Scottish and German leagues were provided by Sports.com (now under new ownership and no longer available).
+Additional match statistics (corners, shots, bookings, referee etc.) for the
+2000/01 and 2001/02 seasons for the English, Scottish and German leagues were
+provided by Sports.com (now under new ownership and no longer available).
 
