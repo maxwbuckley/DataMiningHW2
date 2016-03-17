@@ -25,7 +25,7 @@ for(i in 1:length(input_csv_files)){
 # Combine all the data frames into one.
 cleaned_data <- rbind.fill(df_list[1:i])
 # Format date as proper R date object.
-cleaned_data$Date <- as.Date(cleaned_data$Date, "%Y/%m/%d")
+cleaned_data$Date <- as.Date(cleaned_data$Date, "%d/%m/%y")
 # Factor desired character columns.
 cleaned_data$FTR <- as.factor(cleaned_data$FTR)
 cleaned_data$HTR <- as.factor(cleaned_data$HTR)
