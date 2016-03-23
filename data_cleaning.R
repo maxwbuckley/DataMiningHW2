@@ -37,6 +37,18 @@ cleaned_data$Season <- as.factor(cleaned_data$Season)
 # Remove Division as it is a constant. It adds no information.
 cleaned_data$Div <- NULL
 
+#Calculate points
+HomePoints<-rep(1, nrow(cleaned_data))
+HomePoints[cleaned_data$FTR=="H"] <- 3
+HomePoints[cleaned_data$FTR=="A"] <- 0
+cleaned_data$HomePoints <- HomePoints
+AwayPoints<-rep(1,nrow(cleaned_data))
+AwayPoints[cleaned_data$FTR=="H"] <- 0
+AwayPoints[cleaned_data$FTR=="A"] <- 3
+cleaned_data$AwayPoints <-AwayPoints
+cleaned_data$TotalGoals <-cleaned_data$FTHG + cleaned_data$FTAG
+
+
 # Save as output to use later. Use .Rda format to preserve R
 # type information in addition to data values.
 save(cleaned_data, file = paste0(output_dir, "/",

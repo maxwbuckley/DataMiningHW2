@@ -1,15 +1,20 @@
 # Libraries.
+# Best plotting library ever
 library("ggplot2")
+# For data munging
 library("reshape")
+# More data munginf
 library("reshape2")
+# Same
 library("plyr")
+# Recursive Partitioning decision trees
 library("rpart")
-library("arules")
 # The party package provides nonparametric regression trees
 # for nominal, ordinal, numeric, censored, and multivariate
 # responses.
 library("party")
-
+# Apriori algorithm
+library("arules")
 
 
 # Clear R environment.
@@ -17,30 +22,21 @@ rm(list=ls())
 
 # Set working directory .
 setwd("~/UCD/DataMining/HW2/")
+# This creates an object called cleaned_data in our environment.
 load("CleanedData/cleaned_data.Rda")
 
-#Calculate points
-HomePoints<-rep(1, nrow(cleaned_data))
-HomePoints[cleaned_data$FTR=="H"]<-3
-HomePoints[cleaned_data$FTR=="A"]<-0
-cleaned_data$HomePoints<-HomePoints
-AwayPoints<-rep(1,nrow(cleaned_data))
-AwayPoints[cleaned_data$FTR=="H"]<-0
-AwayPoints[cleaned_data$FTR=="A"]<-3
-cleaned_data$AwayPoints<-AwayPoints
-cleaned_data$TotalGoals<-cleaned_data$FTHG+cleaned_data$FTAG
-
-subset <- cleaned_data[,c(1:6,10,71,75,76)]
+#Take a subset of our data
+subset <- cleaned_data[,c(1:6,10,71,75,76,77)]
 sub_data <- melt(subset, id=c("Date","FTHG","FTAG","FTR",
                               "Referee","Season","HomePoints",
-                              "AwayPoints"))
+                              "AwayPoints", "TotalGoals"))
 sub_data <- rename(sub_data, c("value"="TeamName"))
 sub_data <- rename(sub_data, c("variable"="HomeOrAway"))
 
+# Calculate the respective points for each team.
 sub_data$Points <- 0
 sub_data$Points[sub_data$HomeOrAway=="AwayTeam"] <- sub_data$AwayPoints[sub_data$HomeOrAway=="AwayTeam"]
 sub_data$Points[sub_data$HomeOrAway=="HomeTeam"] <- sub_data$HomePoints[sub_data$HomeOrAway=="HomeTeam"]
-
 
 sub_data$Goals <-0
 sub_data$Goals[sub_data$HomeOrAway=="AwayTeam"] <- sub_data$FTAG[sub_data$HomeOrAway=="AwayTeam"]
@@ -59,6 +55,19 @@ for(i in 1:nrow(opposition)){
 }
 sub_data$Opponent <-as.factor(vec)
 
+# Introduce a calculate metric. goal ratio. Which tells us
+# what proportion of the goals in that match that team scored.
+# To prevent division by zero NaNs. The round later removes this.
+ratio_offset<-1e-6
+sub_data$GoalRatio<-round((sub_data$Goals + ratio_offset)/
+                          (sub_data$TotalGoals + ratio_offset),
+                          digits=2)
+
+
+#Take a subset again
+interestcols<-c("Season", "Date", "HomeOrAway", "Referee", "TeamName", "Opponent", "Points", "Goals", "TotalGoals", "GoalRatio")
+formed_data <- sub_data[, interestcols]
+
 team_points <-aggregate(sub_data$Points, by=list(
   sub_data$TeamName, sub_data$Opponent), FUN=sum)
 
@@ -70,79 +79,12 @@ aggregate(sub_data$Points, by=list(sub_data$TeamName, sub_data$Opponent), FUN=co
 row.names(team_point_ratios)<-colnames(team_point_ratios)
 
 # Replace all 0s.
-team_point_ratios<-replace(team_point_ratios, is.na(team_point_ratios), 0)
+team_point_ratios <- replace(team_point_ratios, is.na(team_point_ratios), 0)
 
-set.seed(66172)
-# Clustering teams by win ratios
-win_clusters <- kmeans(team_point_ratios, 6)
-win_clusters$size
-table(row.names(team_point_ratios), win_clusters$cluster)
+heatmap(as.matrix(team_point_ratios))
 
-d<-dist(team_point_ratios)
-hc<-hclust(d)
-#Hierarchical
-plot(hc, main="Hierarchical clustering by team point ratio performance")
-
-# This tells us how many points team a has gotten in matches with team b
-# team_point_ratios["Liverpool","Man United"]
-# team_point_ratios["Man United", "Liverpool"]
-
-# Can maybe remove this as I put it in cleaned data above.
-sub_data$TotalGoals<-sub_data$FTHG+sub_data$FTAG
-# To prevent division by zero NaNs
-ratio_offset<-1e-6
-sub_data$GoalRatio<-round((sub_data$Goals+ratio_offset)/(sub_data$TotalGoals+ratio_offset), digits=2)
-
-
-interestcols<-c("Season", "Date", "HomeOrAway", "Referee", "TeamName", "Opponent", "Points", "Goals", "TotalGoals", "GoalRatio")
-formed_data <- sub_data[, interestcols]
-# Make new columns to attempt logistic regression
-formed_data$W<-0
-formed_data$L<-0
-formed_data$D<-0
-formed_data$W[formed_data$Points==3]<-1
-formed_data$L[formed_data$Points==0]<-1
-formed_data$D[formed_data$Points==1]<-1
-
-
-tree1 <- rpart(Points ~ TeamName + Opponent, data=formed_data)
-plot(tree1)
-text(tree1)
-# This is interesting. We see that this is picking up what can be described as tiers in the teams. Depending on the the 'tier' of the team on each side we expect a certain number of points 
-
-training_set<-formed_data[formed_data$Date<as.Date("2016-01-01"),]
-testing_set<-formed_data[formed_data$Date>=as.Date("2016-01-01"),]
-
-
-party_tree<-ctree(Points ~ TeamName + Opponent +HomeOrAway, data=training_set)
-plot(party_tree, main="Predicting match results by Decision Tree")
-predictions<-predict(party_tree, newdata=testing_set)
-table(predictions, testing_set$Points)
-
-log_w_reg<-glm(W ~ TeamName + Opponent + HomeOrAway, data=training_set, family="binomial")
-predictions<-predict(log_w_reg, type="response", newdata=testing_set)
-prop.table(table(round(predictions), testing_set$Points),1)
-
-log_d_reg<-glm(D ~ TeamName + Opponent + HomeOrAway, data=training_set, family="binomial")
-predictions<-predict(log_d_reg, type="response", newdata=testing_set)
-prop.table(table(round(predictions), testing_set$Points),1)
-
-log_l_reg<-glm(L ~ TeamName + Opponent + HomeOrAway, data=training_set, family="binomial")
-predictions<-predict(log_l_reg, type="response", newdata=testing_set)
-prop.table(table(round(predictions), testing_set$Points),1)
-
-#tree2<-rpart(FTR~ TeamName+Opponent+HomeOrAway, data=formed_data)
-#plot(tree2)
-#text(tree2)
-
-
-
-
-
-
-
-
-numerical <- formed_data[,-c(1,2,3,4)]
+## More exploration
+numerical <- formed_data[,-c(1,2,3,4,5,6)]
 sum_mat<-aggregate(numerical, by=list(formed_data$Season, formed_data$TeamName), FUN=sum)
 mean_mat<-aggregate(numerical, by=list(formed_data$Season, formed_data$TeamName), FUN=mean)
 sum_mat$GoalRatio<-mean_mat$GoalRatio
