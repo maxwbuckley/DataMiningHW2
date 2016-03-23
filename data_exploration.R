@@ -65,7 +65,9 @@ sub_data$GoalRatio<-round((sub_data$Goals + ratio_offset)/
 
 
 #Take a subset again
-interestcols<-c("Season", "Date", "HomeOrAway", "Referee", "TeamName", "Opponent", "Points", "Goals", "TotalGoals", "GoalRatio")
+interestcols<-c("Season", "Date", "HomeOrAway", "Referee",
+                "TeamName", "Opponent", "Points", "Goals",
+                "TotalGoals", "GoalRatio")
 formed_data <- sub_data[, interestcols]
 
 team_points <-aggregate(sub_data$Points, by=list(
@@ -83,6 +85,77 @@ team_point_ratios <- replace(team_point_ratios, is.na(team_point_ratios), 0)
 
 heatmap(as.matrix(team_point_ratios))
 
+# Melt the team point raios to get a historical point record.
+# A variable that tells use how well this team has done
+# against this opponent.
+historical_point_record<-melt(cbind(row.names(
+  team_point_ratios), team_point_ratios))
+colnames(historical_point_record)<-c("TeamName", "Opponent",
+                                     "PointRatio")
+
+historical_point_record<- merge(
+  historical_point_record, historical_point_record,
+  by.x=c("TeamName", "Opponent"), by.y=c("Opponent",
+                                         "TeamName"))
+colnames(historical_point_record)[3:4]<-c(
+  "HistoricalPointRatio","HistoricalOpponentPointRatio")
+
+sub_data<-merge(sub_data, historical_point_record, by=c(
+  "TeamName", "Opponent"))
+
+# Get means and sd for goals for given teams to build assumption that it is a random process
+means<-tapply(sub_data$Goals, sub_data$TeamName, FUN=mean)
+sds<-tapply(sub_data$Goals, sub_data$TeamName, FUN=sd)
+
+goal_frame<-data.frame(cbind(rownames(sds),means,sds))
+rownames(goal_frame)<-NULL
+colnames(goal_frame)<-c("TeamName","MeanGoals","SDGoals")
+goal_frame$MeanGoals<-as.numeric(as.character(
+  goal_frame$MeanGoals))
+goal_frame$SDGoals<-as.numeric(as.character(
+  goal_frame$SDGoals))
+
+
+table(sub_data$Goals)/sum(sub_data$Goals)
+# What distribution are goals drawn from?
+
+norm_goals<-merge(goal_frame, goal_frame, by=NULL)#, type="full")
+win_rate<-vector()
+draw_rate<-vector()
+lose_rate<-vector()
+norm_favour<-vector()
+
+for(i in 1:nrow(norm_goals)){
+  reps<-10000
+  a<-rnorm(reps, mean=norm_goals$MeanGoals.x[i], sd=norm_goals$SDGoals.x[i])
+  b<-rnorm(reps, mean=norm_goals$MeanGoals.y[i], sd=norm_goals$SDGoals.y[i])
+  sum(a<b)/reps
+  apois<-rpois(reps, lambda=norm_goals$MeanGoals.x[i])
+  bpois<-rpois(reps, lambda=norm_goals$MeanGoals.y[i])
+  norm<-sum(a<b)/reps
+  win<-sum(apois>bpois)/reps
+  draw<-sum(apois==bpois)/reps
+  lose<-sum(apois<bpois)/reps
+  
+  win_rate<-c(win_rate,win)
+  draw_rate<-c(draw_rate,draw)
+  lose_rate<-c(lose_rate, lose)
+  norm_favour<-c(norm_favour,norm)
+}
+
+norm_goals<-cbind(norm_goals,win_rate,draw_rate,lose_rate)
+colnames(norm_goals)<-c("TeamName","MeanGoals","SDGoals","Opponent","OpponentMeanGoals","OpponentSDGoals","WinRate","DrawRate","LoseRate")
+
+join(sub_data, goal_frame, by=c("TeamName"))
+
+
+
+model <-lm(Points~PointRatio + OpponentPointRatio, data=sub_data)
+summary(model)
+
+model <-rpart(Points~PointRatio +OpponentPointRatio, data=sub_data)
+summary(model)
+plot(model)
 ## More exploration
 numerical <- formed_data[,-c(1,2,3,4,5,6)]
 sum_mat<-aggregate(numerical, by=list(formed_data$Season, formed_data$TeamName), FUN=sum)

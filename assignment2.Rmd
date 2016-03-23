@@ -76,7 +76,7 @@ With some of my data preprocessing I now had a better idea of what my data sourc
 
 Naively one would assume that the match result and teams playing would appear to be the most imortant factors. So a question to ask is which teams are the best historically. How are these different teams doing?
 
-Given the dataset is currently in wide form and quite difficult to work with I decided to switch it to log form. So rather than having the winner and loser in one row I would have one row for each side and I could then more easily aggregate it.
+Given the dataset is currently in wide form and quite difficult to work with I decided to switch it to long form. So rather than having the winner and loser in one row I would have one row for each side and I could then more easily aggregate it.
 
 ```{r message=FALSE, warning=FALSE}
 # Libraries.
@@ -153,8 +153,10 @@ head(sub_data)
 # Data Exploration
 ```{r message=FALSE, warning=FALSE}
 #Take a subset again
-interest_cols<-c("Season", "Date", "HomeOrAway", "Referee", "TeamName",
-                 "Opponent", "Points", "Goals", "TotalGoals", "GoalRatio")
+interest_cols<-c("Season", "Date", "HomeOrAway", "Referee",
+                 "TeamName", "Opponent", "Points", "Goals",
+                 "TotalGoals", "GoalRatio")
+
 formed_data <- sub_data[, interest_cols]
 
 team_points <-aggregate(sub_data$Points, by=list(
@@ -177,6 +179,14 @@ team_point_ratios <- replace(team_point_ratios, is.na(team_point_ratios), 0)
 
 # Heat map clusters the matrix heirarchically and colours the cells by the value intensity.
 heatmap(as.matrix(team_point_ratios))
+
+# Melt the team point raios to get a historical point record.
+# A variable that tells use how well this team has done
+# against this opponent.
+historical_point_record<-melt(cbind(row.names(
+  team_point_ratios), team_point_ratios))
+colnames(historical_point_record)<-c("TeamName", "Opponent",
+                                     "PointRatio")
 ```
 
 From this heatamap we can see some instant information .... PLEASE FILL OUT.
