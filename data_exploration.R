@@ -280,7 +280,6 @@ t.test(cleaned_data$FTHG, cleaned_data$FTAG)
 p <- ggplot(cleaned_data, aes(HS, FTHG))
 p + geom_point() + geom_smooth(method = "lm", se = FALSE) +
   labs(title = "Home Team Goals as a Function of Shots")
-#ggsave("TotalGoalsByShotsHome.pdf", width=8, height=8)
 summary(lm(cleaned_data$FTHG~cleaned_data$HS ))
 
 # Score drivers

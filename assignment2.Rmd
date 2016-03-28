@@ -52,7 +52,7 @@ cleaned_data$AwayTeam <- as.factor(cleaned_data$AwayTeam)
 cleaned_data$Referee <- as.factor(cleaned_data$Referee)
 cleaned_data$Season <- as.factor(cleaned_data$Season)
 
-# Remove Division as it is a constant. It adds no information.
+# Remove Division as it is a constant. It adds no info.
 cleaned_data$Div <- NULL
 
 #Calculate points
@@ -73,8 +73,6 @@ save(cleaned_data, file = paste0(output_dir, "/",
                                  "cleaned_data.Rda"))
 ```
 With some of my data preprocessing I now had a better idea of what my data source looks like and how it is strucutred.
-
-Naively one would assume that the match result and teams playing would appear to be the most imortant factors. So a question to ask is which teams are the best historically. How are these different teams doing?
 
 Given the dataset is currently in wide form and quite difficult to work with I decided to switch it to long form. So rather than having the winner and loser in one row I would have one row for each side and I could then more easily aggregate it.
 
@@ -108,17 +106,18 @@ setwd("~/UCD/DataMining/HW2/")
 # This creates an object called cleaned_data in our environment.
 load("CleanedData/cleaned_data.Rda")
 
-# Gets our long form dataset.
+# Gets our long form dataset. This function doesn't maintain all the columns.
 get_long_data <- function(){
   # Take a subset of our data
   # Team names, results, refs and dates/seasons
   subset <- cleaned_data[,c(1:6, 10, 71, 75, 76, 77)]
   # Convet dataset to long form from wide form.
-  sub_data <- melt(subset, id=c("Date","FTHG","FTAG","FTR",
-                                "Referee","Season","HomePoints",
-                                "AwayPoints", "TotalGoals"))
-  sub_data <- rename(sub_data, c("value"="TeamName"))
-  sub_data <- rename(sub_data, c("variable"="HomeOrAway"))
+  sub_data <- melt(subset, id=c("Date", "FTHG", "FTAG", 
+                                "FTR", "Referee", "Season", 
+                                "HomePoints", "AwayPoints", 
+                                "TotalGoals"))
+  sub_data <- rename(sub_data, c("value" = "TeamName"))
+  sub_data <- rename(sub_data, c("variable" = "HomeOrAway"))
   
   # Calculate the respective points for each team.
   sub_data$Points <- 0
@@ -163,12 +162,15 @@ get_long_data <- function(){
 sub_data <- get_long_data()
 
 #Take a peek.
-head(sub_data)
+head(sub_data[,-c(2:4)])
 ```
 
+This long form data will be more useful in some instances. Now I can predict win/lose/draw for teams rather than say home/away/draw which would have been confounded by the fact that a given team can be either home or away. An importatn thing to note is there is now 2 rows per match. One row for the home team and one for the away team. Another benefit off this new structure is that I can now aggregate it. Summing the points for a given team easily.
+
 # Data Exploration
+## Best Teams
 ```{r message=FALSE, warning=FALSE}
-#Take another subset
+# Take another subset
 interestcols<-c("Season", "Date", "HomeOrAway", "Referee",
                 "TeamName", "Opponent", "Points", "Goals",
                 "TotalGoals", "GoalRatio")
@@ -177,10 +179,15 @@ formed_data <- sub_data[, interestcols]
 
 ## More exploration
 numerical <- formed_data[,-c(1,2,3,4,5,6)]
-sum_mat<-aggregate(numerical, by=list(formed_data$Season, formed_data$TeamName), FUN=sum)
-mean_mat<-aggregate(numerical, by=list(formed_data$Season, formed_data$TeamName), FUN=mean)
-sum_mat$GoalRatio<-mean_mat$GoalRatio
-sum_mat <- rename(sum_mat, c("Group.1"="Season","Group.2"="TeamName"))
+sum_mat<-aggregate(numerical, by=list(formed_data$Season, 
+                                      formed_data$TeamName), 
+                   FUN=sum)
+mean_mat<-aggregate(numerical, by=list(formed_data$Season, 
+                                       formed_data$TeamName
+                                       ), FUN=mean)
+sum_mat$GoalRatio <- mean_mat$GoalRatio
+sum_mat <- rename(sum_mat, c("Group.1"="Season",
+                             "Group.2"="TeamName"))
 sum_mat<-sum_mat[order(as.character(sum_mat$Season), sum_mat$Points, decreasing=TRUE),]
 row.names(sum_mat)<-1:120
 sum_mat<-ddply(sum_mat, .(Season), transform, Rank = rank(-Points, ties.method="first"))
@@ -188,10 +195,21 @@ sum_mat<-ddply(sum_mat, .(Season), transform, Rank = rank(-Points, ties.method="
 
 p<- ggplot(sum_mat, aes(Season, Points, group=TeamName,
                         colour=TeamName))
-p + geom_path(alpha=1)+ labs(title = "Team Points by Season") +
-  guides(colour=guide_legend(ncol=2))
+p + geom_path(alpha=1)+ labs(title = "Team Points by Season"
+                             ) + guides(colour=guide_legend
+                                        (ncol=2))
+```
 
 
+Naively one would assume that the match result and teams playing would appear to be the most imortant factors. So a question to ask is which teams are the best historically and how are these different teams doing?
+
+
+Of course we immeadiatly see multiple problems with this chart. One is that the 2015/16 season 
+is incomplete so all the lines collapse to the center. Also maybe it is a better question to
+ask what is the rank of any given team in a particular year.
+
+
+```{r}
 p <- ggplot(sum_mat, aes(Season, Rank, group=TeamName,
                         colour=TeamName))
 p + geom_path(alpha=1)+ labs(title= "Team Rank by Season") +
@@ -200,31 +218,51 @@ p + geom_path(alpha=1)+ labs(title= "Team Rank by Season") +
 # Look at trends over time
 rank_by_season <- cast(sum_mat, TeamName ~Season, mean,   value='Rank')
 rank_by_season
+
 ```
 
-From this heatamap we can see some instant information .... PLEASE FILL OUT.
+From this, improved chart we can see that team performance is quite volatile and unpredicatble. Teams can move up and down the leaderboard year to year.
+We also see a lot of the teams at the top of the chart tend to be discontinuos as they get relegated due to poor performance. The table at the bottom makes this a little easier to see. The NaN values represent years in which that team did not participate.
 
+Now that I have some idea of what teams are doing well my next exploratory questions are to look at if there are any other interesting relationships.
 
-
+## Home and Away
 ```{r}
-
-# Are there differences between referees?
-
-tapply(cleaned_data$TotalGoals,cleaned_data$Referee, FUN=mean)
-
-p <- ggplot(cleaned_data, aes(Referee, TotalGoals))
-p + geom_boxplot() + geom_jitter()
+# How many points on average do you get for a home or away match?
+tapply(sub_data$Points, sub_data$HomeOrAway, FUN=mean)
 
 
-# Relationship betwen half time result and full time result.
-prop.table(table(cleaned_data$FTR, cleaned_data$HTR),2)
-
-# Examine relationship between home and away
+# Examine relationship between home and away results
 win_odds<-prop.table(table(cleaned_data$FTR))
 win_odds
 
 round(win_odds/min(win_odds),2)
 
+# There is a statistical difference between
+t.test(cleaned_data$FTHG, cleaned_data$FTAG, paired=TRUE)
+
+```
+It seems my soccer loving friends were correct there seems to be a large difference between home and away performances in favour of home. Home victory is ~50% more likely than an away victory.
+
+## Referees
+```{r}
+# Are there differences between referees?
+
+tapply(cleaned_data$TotalGoals,cleaned_data$Referee, FUN=mean)
+
+p <- ggplot(cleaned_data, aes(Referee, TotalGoals))
+p + geom_boxplot() + geom_jitter() + labs(title= "Total 
+                                          Goals by referee.")
+
+```
+
+There appears to be no relationship between total goals and referee
+
+
+## Half time vs. Full time.
+```{r}
+# Relationship betwen half time result and full time result.
+prop.table(table(cleaned_data$FTR, cleaned_data$HTR),2)
 
 summary(lm(cleaned_data$FTHG~cleaned_data$FTAG))
 p <- ggplot(cleaned_data, aes(FTAG, FTHG))
@@ -233,13 +271,37 @@ p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 tapply(cleaned_data$FTHG, cleaned_data$Season, FUN=mean)
 tapply(cleaned_data$FTAG, cleaned_data$Season, FUN=mean)
 
-# There is a statistical difference
-t.test(cleaned_data$FTHG, cleaned_data$FTAG)
 ```
 
-Of course we immeadiatly see multiple problems with this chart. One is that the 2015/16 season 
-is incomplete so all the lines collapse to the center. Also maybe it is a better question to
-ask what is the rank of any given team in a particular year.
+## Match Statistics.
+While the match statistics are very interesting I didn't explore them too much as they wouldn't be of huge use in predicting match results. However here are some of my observations.
 
-TBC:
+```{r}
+# Relationship between shots and goals
+p <- ggplot(cleaned_data, aes(HS, FTHG))
+p + geom_point() + geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Home Team Goals as a Function of Shots")
+summary(lm(cleaned_data$FTHG~cleaned_data$HS ))
 
+# Score drivers
+# 2,3 are team names
+match_stats<-cleaned_data[,colnames(cleaned_data)[c(2,3,4,5,11:22)]]
+cor(match_stats[,-c(1,2)])
+```
+
+There are some pretty strong correlations in here which 
+
+## Gambling Data.
+
+```{r}
+p <- ggplot(cleaned_data, aes(B365H, WHH))
+p + geom_point() + geom_smooth(method = "lm", se = FALSE)
+
+p <- ggplot(cleaned_data, aes(VCH, WHH))
+p + geom_point() + geom_smooth(method = "lm", se = FALSE)
+```
+I found most of the bookies were in agreement when it came to the odds. These above plots show the very strong correlations. I expect that this data will be quite useful when it comes to trying to predict match results. Well, at least as useful as any.
+
+
+# Data modelling.
+For this section I 
