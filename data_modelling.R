@@ -1,6 +1,8 @@
 # Apriori algorithm
 library("arules")
 
+training_set <- sub_data[sub_data$Date < "2016-01-01",]
+testing_set <- sub_data[sub_data$Date >= "2016-01-01",]
 
 pre_16_record <- calculate_team_perf_pairs("2016-01-01")
 
@@ -63,5 +65,5 @@ formed_data$D[formed_data$Points==1]<-1
 
 
 
-party_tree<-ctree(Result ~., data=sub_data[,c(1,2,7,8,12,14,17,18,23,24,25)], controls=ctree_control(maxdepth=4))
+party_tree<-ctree(Result ~., data=sub_data[,c(2,7,8,13:15)], controls=ctree_control(maxdepth=4))
 plot(party_tree, main="Predicting match results by Decision Tree")
