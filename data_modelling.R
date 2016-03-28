@@ -1,3 +1,9 @@
+# Apriori algorithm
+library("arules")
+
+
+pre_16_record <- calculate_team_perf_pairs("2016-01-01")
+
 # Do clustering later
 set.seed(66172)
 # Clustering teams by win ratios
@@ -53,3 +59,9 @@ formed_data$D<-0
 formed_data$W[formed_data$Points==3]<-1
 formed_data$L[formed_data$Points==0]<-1
 formed_data$D[formed_data$Points==1]<-1
+
+
+
+
+party_tree<-ctree(Result ~., data=sub_data[,c(1,2,7,8,12,14,17,18,23,24,25)], controls=ctree_control(maxdepth=4))
+plot(party_tree, main="Predicting match results by Decision Tree")
