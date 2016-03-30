@@ -32,7 +32,8 @@ cleaned_data$HTR <- as.factor(cleaned_data$HTR)
 cleaned_data$HomeTeam <- as.factor(cleaned_data$HomeTeam)
 cleaned_data$AwayTeam <- as.factor(cleaned_data$AwayTeam)
 cleaned_data$Referee <- as.factor(cleaned_data$Referee)
-cleaned_data$Season <- as.factor(cleaned_data$Season)
+cleaned_data$Season <- as.factor(
+  gsub("20(\\d+)_(\\d+)","\\1/\\2",cleaned_data$Season,))
 
 # Remove Division as it is a constant. It adds no information.
 cleaned_data$Div <- NULL
