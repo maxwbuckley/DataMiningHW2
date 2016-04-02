@@ -11,7 +11,7 @@ In this assignment I aim to explore throughly the provided dataset of Premier Le
 
 >Your task is to analyse Premier League match data provided since 2010 up to and including last weekend (6 March 2016). You should attempt to uncover interesting and potentially useful patterns and rules which might be used to determine the outcome of the remaining matches in the 2016 league.
 
-I will break my analysis into its logical steps so that I start with data cleaning and preperation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducable research. I did a fair bit more exploring and playing with models. However this document is long enough at thirty pages plus. If you are interested you can take a look at the lot and the revisions in my [Github] repository.
+I will break my analysis into its logical steps so that I start with data cleaning and preperation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducable research. I did a fair bit more exploring and playing with models. However this document is long enough at twenty plus pages. If you are interested you can take a look at the lot and the revisions in my [Github] repository.
 
 An interesting thing to note is I have absolutely no interest in soccer I may be unaware of or ask naive questions of the data vis-a-vis the soccer afficianados in the class.
 
@@ -21,12 +21,11 @@ For this assignment I will be using the statistical programming language [R]. I 
 # Data Cleaning
 ```{r results='hide', message=F, warning=F}
 # Libraries.
-library("plyr")
 # Best plotting library ever
 library("ggplot2")
 # For data munging
 library("reshape")
-# More data munginf
+# More data munging
 library("reshape2")
 # Same
 library("plyr")
@@ -40,6 +39,9 @@ library("party")
 library("caret")
 # Package for fitting random forests.
 library("randomForest")
+# Nice date handling
+library("lubridate")
+
 
 # Clear R environment.
 rm(list=ls())
@@ -72,8 +74,9 @@ cleaned_data$HTR <- as.factor(cleaned_data$HTR)
 cleaned_data$HomeTeam <- as.factor(cleaned_data$HomeTeam)
 cleaned_data$AwayTeam <- as.factor(cleaned_data$AwayTeam)
 cleaned_data$Referee <- as.factor(cleaned_data$Referee)
-cleaned_data$Season <- as.factor(gsub("20(\\d+)_(\\d+)","\\1/\\2",cleaned_data$Season,))
-cleaned_data$Day<-weekdays(cleaned_data$Date)
+cleaned_data$Season <- as.factor(gsub("20(\\d+)_(\\d+)","\\1/\\2",
+                                      cleaned_data$Season,))
+cleaned_data$WeekDay<-wday(cleaned_data$Date, label=TRUE)
 
 # Remove Division as it is a constant. It adds no info.
 cleaned_data$Div <- NULL
@@ -116,7 +119,7 @@ load("CleanedData/cleaned_data.Rda")
 get_long_data <- function(){
   # Take a subset of our data
   # Team names, results, refs and dates/seasons
-  subset <- cleaned_data[,c(1:6, 10, 71, 75, 76, 77)]
+  subset <- cleaned_data[,c(1:6, 10, 71, 76, 77, 78)]
   # Convet dataset to long form from wide form.
   sub_data <- melt(subset, id=c("Date", "FTHG", "FTAG", 
                                 "FTR", "Referee", "Season", 
@@ -236,7 +239,6 @@ Does it make a difference when you are home or away?
 # How many points on average do you get for a home or away match?
 tapply(sub_data$Points, sub_data$HomeOrAway, FUN=mean)
 
-
 # Examine the relationship between home and away results
 prop.table(table(cleaned_data$FTR))
 
@@ -250,11 +252,30 @@ It seems my soccer loving friends were correct there seems to be a large differe
 p <- ggplot(cleaned_data, aes(FTAG, FTHG))
 p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 ```
+## Day of the week
+It would be interesting to see if performance changes as a function of day of the week. Above in data cleaning I added a variable weekday. So here I will explore it.
+
+```{r}
+# Plot the relationship between goals and day of the week.
+p <- ggplot(cleaned_data, aes(WeekDay, TotalGoals))
+p + geom_boxplot()
+
+# How many matches have we seen on each day?
+table(cleaned_data$WeekDay)
+
+# Why does home advantage appear biggest on a Saturday? More home attendees?
+# We also have the most obserations on Saturdays so should be more certain
+# of our estimate.
+tapply(cleaned_data$HomePoints, cleaned_data$WeekDay, FUN=mean) -
+  tapply(cleaned_data$AwayPoints, cleaned_data$WeekDay, FUN=mean)
+
+```
+We don't see many matches on Thursdays or Fridays.
 
 ## Referees
 ```{r}
 # Are there differences between referees?
-tapply(cleaned_data$TotalGoals,cleaned_data$Referee, FUN=mean)
+tapply(cleaned_data$TotalGoals, cleaned_data$Referee, FUN=mean)
 
 p <- ggplot(cleaned_data, aes(Referee, TotalGoals))
 p + geom_boxplot() + geom_jitter() + labs(
@@ -365,8 +386,10 @@ testing_set <- sub_data[sub_data$Date >= split_date,]
 historical_point_record <- calculate_team_perf_pairs(split_date)
 
 # I am dropping all the columns with NA values.
-wide_training_set<-cleaned_data[cleaned_data$Date<split_date, -which(colSums(is.na(cleaned_data))>0)]
-wide_testing_set<-cleaned_data[cleaned_data$Date>=split_date, -which(colSums(is.na(cleaned_data))>0)]
+wide_training_set<-cleaned_data[cleaned_data$Date<split_date,
+                                -which(colSums(is.na(cleaned_data))>0)]
+wide_testing_set<-cleaned_data[cleaned_data$Date>=split_date,
+                               -which(colSums(is.na(cleaned_data))>0)]
 
 # Target prediction values.
 truth <- wide_testing_set$FTR
@@ -407,7 +430,8 @@ Using the wide dataset, teams and all the complete gambling data my random fores
 Lets see how accurate we can get predicting with the match stats. Even though that is gonna be unusable in everyday situations. Makes for a nice tree though and a formidable 58.16% accuracy
 
 ```{r}
-tree3<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,11:43)], controls=ctree_control(maxdepth=6))
+tree3<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,11:43)],
+             controls=ctree_control(maxdepth=6))
 plot(tree3, main="Predicting match results by Decision Tree")
 predictions<-predict(tree3, wide_testing_set)
 confusionMatrix(predictions, wide_testing_set$FTR)
@@ -432,15 +456,15 @@ The teams that join lower down the tree are more similar than the ones who join 
 
 Of course this graph is treating all matches equally so more recent performance is not being weighed any way more heavily than  historic performance.
 ```{r}
-# Explore what this looks like. Heatmap does heirarchical clustering on the rows and columns.
+# Explore what this looks like. Heatmap does heirarchical clustering
+# on the rows and columns.
 heatmap(as.matrix(team_point_ratios))
 
 ```
-# Conclusion
 
-In the above report I have explored the provided premier 
+#Conclusion
 
-DAYOFWEEK!
+In the above report I have explored the provided premier league data. TBC.
 
 [Github]:https://github.com/maxwbuckley/DataMiningHW2
 [ggplot2]:http://ggplot2.org/
