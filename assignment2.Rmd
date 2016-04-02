@@ -1,20 +1,24 @@
 ---
 title: 'Data Mining Homework 2: Premier League'
 author: "Max Buckley"
-date: "22/03/2016"
+date: "02/04/2016"
 output: pdf_document
 ---
+
+# Introduction
 
 In this assignment I aim to explore throughly the provided dataset of Premier League soccer matches. From the brief the objective is:
 
 >Your task is to analyse Premier League match data provided since 2010 up to and including last weekend (6 March 2016). You should attempt to uncover interesting and potentially useful patterns and rules which might be used to determine the outcome of the remaining matches in the 2016 league.
 
-I will break my analysis into its logical steps so that I start with data cleaning and preperation, progress to data exploration, and then lastly attempt data modelling and prediction. I will include all my code in the interests of reproducable research.
+I will break my analysis into its logical steps so that I start with data cleaning and preperation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducable research. I did a fair bit more exploring and playing with models. However this document is long enough at thirty pages plus. If you are interested you can take a look at the lot and the revisions in my [Github] repository.
 
 An interesting thing to note is I have absolutely no interest in soccer I may be unaware of or ask naive questions of the data vis-a-vis the soccer afficianados in the class.
 
-#Data Cleaning
+# Tools
+For this assignment I will be using the statistical programming language [R]. I will be using the [ggplot2] plotting library and rendering the whole thing using [RStudio] and [RMarkdown].
 
+# Data Cleaning
 ```{r results='hide', message=F, warning=F}
 # Libraries.
 library("plyr")
@@ -69,6 +73,7 @@ cleaned_data$HomeTeam <- as.factor(cleaned_data$HomeTeam)
 cleaned_data$AwayTeam <- as.factor(cleaned_data$AwayTeam)
 cleaned_data$Referee <- as.factor(cleaned_data$Referee)
 cleaned_data$Season <- as.factor(gsub("20(\\d+)_(\\d+)","\\1/\\2",cleaned_data$Season,))
+cleaned_data$Day<-weekdays(cleaned_data$Date)
 
 # Remove Division as it is a constant. It adds no info.
 cleaned_data$Div <- NULL
@@ -83,7 +88,6 @@ AwayPoints[cleaned_data$FTR=="H"] <- 0
 AwayPoints[cleaned_data$FTR=="A"] <- 3
 cleaned_data$AwayPoints <-AwayPoints
 cleaned_data$TotalGoals <-cleaned_data$FTHG + cleaned_data$FTAG
-
 
 # Save as output to use later. Use .Rda format to preserve R
 # type information in addition to data values.
@@ -162,12 +166,11 @@ get_long_data <- function(){
 }
 
 sub_data <- get_long_data()
-
 #Take a peek.
 head(sub_data[,-c(2:4)])
 ```
 
-This long form data will be more useful in some instances. Now I can predict win/lose/draw for teams rather than say home/away/draw which would have been confounded by the fact that a given team can be either home or away. An important thing to note is there is now 2 rows per match. One row for the home team and one for the away team. Another benefit off this new structure is that I can now aggregate it. Summing the points for a given team easily.
+This long form data will be more useful for prediction in some instances. Now I can predict win/lose/draw for teams rather than say home/away/draw which would have been confounded by the fact that a given team can be either home or away. An important thing to note is there is now 2 rows per match. One row for the home team and one for the away team. Another benefit of this new structure is that I can now aggregate it. Summing the points for a given team easily.
 
 # Data Exploration
 ## Who are the best teams?
@@ -196,7 +199,6 @@ sum_mat<-sum_mat[order(as.character(sum_mat$Season), sum_mat$Points, decreasing=
 row.names(sum_mat)<-1:120
 sum_mat<-ddply(sum_mat, .(Season), transform, Rank = rank(-Points, ties.method="first"))
 
-
 p<- ggplot(sum_mat, aes(Season, Points, group=TeamName,
                         colour=TeamName))
 p + geom_path(alpha=1)+ labs(title = "Team Points by Season"
@@ -204,9 +206,9 @@ p + geom_path(alpha=1)+ labs(title = "Team Points by Season"
                                         (ncol=2))
 ```
 
-Of course we immeadiatly see multiple problems with this chart. One is that the 2015/16 season 
+Of course, looking a this plot we immediately see multiple problems. One is that the 2015/16 season 
 is incomplete so all the lines collapse towards the center. Also maybe it is a better question to
-ask what is the rank of any given team in a particular year.
+ask what is the rank of any given team in a particular year. Note these ranks may not be exactly the same as the actual rank as I am not accounting for goal difference here.
 
 
 ```{r}
@@ -214,65 +216,62 @@ p <- ggplot(sum_mat, aes(Season, Rank, group=TeamName,
                         colour=TeamName))
 p + geom_path(alpha=1)+ labs(title= "Team Rank by Season") +
   guides(colour=guide_legend(ncol=2))
-  
+
+```
+From this, improved chart we can more clearly see that team performance is pertty volatile and hence more difficult predict. Teams can move up and down the leaderboard year to year. We see a lot of the teams at the top of the chart tend to be discontinuos as they get relegated due to poor performance. Thugh it would probably be digest this data in tabular form.
+
+```{r}
 # Look at trends over time
 rank_by_season <- cast(sum_mat, TeamName ~Season, mean,   value='Rank')
 rank_by_season
-
 ```
 
-From this, improved chart we can see that team performance is quite volatile and unpredicatble. Teams can move up and down the leaderboard year to year.
-We also see a lot of the teams at the top of the chart tend to be discontinuos as they get relegated due to poor performance. The table at the bottom makes this a little easier to see. The NaN values represent years in which that team did not participate.
+The table at the bottom makes this a little easier to see. The NaN values represent years in which that team did not participate.
 
-Now that I have some idea of what teams are doing well my next exploratory questions are to look at if there are any other interesting relationships.
+Now that I have some idea of what teams are doing well my next exploratory questions are to look at if there are any other interesting relationships in the data.
 
 ## Home and Away
+Does it make a difference when you are home or away?
 ```{r}
 # How many points on average do you get for a home or away match?
 tapply(sub_data$Points, sub_data$HomeOrAway, FUN=mean)
 
 
-# Examine relationship between home and away results
-win_odds<-prop.table(table(cleaned_data$FTR))
-win_odds
-
-round(win_odds/min(win_odds),2)
+# Examine the relationship between home and away results
+prop.table(table(cleaned_data$FTR))
 
 # There is a statistical difference between
 t.test(cleaned_data$FTHG, cleaned_data$FTAG, paired=TRUE)
-
 ```
-It seems my soccer loving friends were correct there seems to be a large difference between home and away performances in favour of home. Home victory is ~50% more likely than an away victory.
+It seems my soccer loving friends were correct there seems to be a large difference between home and away performances in favour of home. Home victories are ~50% more likely than away victories.
+
+```{r}
+# Plot the relationship between home and away goals
+p <- ggplot(cleaned_data, aes(FTAG, FTHG))
+p + geom_point() + geom_smooth(method = "lm", se = FALSE)
+```
 
 ## Referees
 ```{r}
 # Are there differences between referees?
-
 tapply(cleaned_data$TotalGoals,cleaned_data$Referee, FUN=mean)
 
 p <- ggplot(cleaned_data, aes(Referee, TotalGoals))
 p + geom_boxplot() + geom_jitter() + labs(
-  title= "Total Goals by referee.") + theme(axis.ticks = element_blank(), axis.text.x = element_blank())
+  title= "Total Goals by referee.") + theme(
+    axis.ticks = element_blank(), axis.text.x = element_blank())
 
 ```
 
-There appears to be no relationship between total goals and referee.
+There appears to be no relationship between total goals and referee. Which is probably for the best as otherwise we would have some serious questions to ask.
 
 ## Half time vs. Full time.
 ```{r}
 # Relationship betwen half time result and full time result.
 prop.table(table(cleaned_data$FTR, cleaned_data$HTR),2)
-
-summary(lm(cleaned_data$FTHG~cleaned_data$FTAG))
-p <- ggplot(cleaned_data, aes(FTAG, FTHG))
-p + geom_point() + geom_smooth(method = "lm", se = FALSE)
-
-tapply(cleaned_data$FTHG, cleaned_data$Season, FUN=mean)
-tapply(cleaned_data$FTAG, cleaned_data$Season, FUN=mean)
-
 ```
 
-Unsurprisingly the half time result is a strong predictor of the full time result. But it wouldn' be a very good predictive model if you got to use that.
+Unsurprisingly the half time result is a super strong predictor of the full time result. But it wouldn' be a very good predictive model if we got to use that. As it would imply we were predicting at the half time whistle.
 
 ## Match Statistics.
 While the match statistics are very interesting I didn't explore them too much as they wouldn't be of huge use in predicting match results in advance. However here are some of my observations.
@@ -290,22 +289,27 @@ match_stats<-cleaned_data[,colnames(cleaned_data)[c(2,3,4,5,11:22)]]
 cor(match_stats[,-c(1,2)])
 ```
 
-There are some pretty strong correlations in here which is unsurprising. As you can't have a goal without a shot etc.
+There are some pretty strong correlations in here which is unsurprising. As you can't have a goal without a shot on target and you can't have a shot on target without a shot, etc...
 
 ## Gambling Data.
+My prior assumption is that the bookie data would make for decent predictions and that all the bookies would be highly correlated.
 
 ```{r}
+# Plot two bookies odds against one another.
 p <- ggplot(cleaned_data, aes(B365H, WHH))
 p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 
 p <- ggplot(cleaned_data, aes(VCH, WHH))
 p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 ```
-I found most of the bookies were in agreement when it came to the odds. These above plots show the very strong correlations. I expect that this data will be quite useful when it comes to trying to predict match results. Well, at least as useful as any.
-
+As expected, I found most of the bookies were in agreement when it came to the odds. These above plots show the very strong correlations.
 
 # Data modelling.
-For this section I will explore fitting some predictive models to the data. The goal will be to attempt to predict the outcome of a given match with some degree of accuracy
+For this section I will explore fitting some predictive models to the data. The goal will be to attempt to predict the outcome of a given match with some degree of accuracy. To do this I will try fitting some simple models. Then try to derive some more interesting calculated metrics from the data and see if they work.
+
+I will then trying fitting some more complex models and see if I can improve my predictions. The objective here is demonstration rather than accuracy so I will not be tuning and optimizing models but rather fitting them out of the box.
+
+I will use all the data up to end of 2015 as my training set and I will use 2016 data to date as my testing set.
 ```{r}
 get_team_perf_ratio_matrix <- function(max_date){
   sub_data <- sub_data[sub_data$Date<max_date, ]
@@ -360,129 +364,35 @@ testing_set <- sub_data[sub_data$Date >= split_date,]
 
 historical_point_record <- calculate_team_perf_pairs(split_date)
 
-truth <- testing_set$Points
-#Lets get a baseline. All guess majority class, all wins.
-base_preds <- rep(3,196)
-confusionMatrix(base_preds, truth)
-
-fix_preds <- function(model, testing_set){
-  predictions<-floor(predict(model, testing_set))
-  predictions[predictions==2]=3
-  return(predictions)
-  }
-
-#First lets fit a simple tree. Team and Opponent
-tree1 <- rpart(Points ~ TeamName + Opponent, data=training_set)
-plot(tree1)
-text(tree1)
-
-# These predictions are continuous floats. need to change to ints.
-tree_predictions1<-fix_preds(tree1, testing_set)
-confusionMatrix(tree_predictions1, truth)
-
-#First lets fit a more complex tree. Adding HomeOrAway
-tree2 <- rpart(Points ~ TeamName + Opponent + HomeOrAway, data=training_set)
-plot(tree2)
-text(tree2)
-
-tree_predictions2 <- fix_preds(tree2, testing_set)
-# Actually makes us less accurate. 42.86%
-confusionMatrix(tree_predictions2, truth)
-
-
-party_tree<-ctree(Points ~ TeamName + Opponent + HomeOrAway, data=training_set, controls=ctree_control(maxdepth=6))
-plot(party_tree, main="Predicting match results by Decision Tree")
-predictions<-fix_preds(party_tree, testing_set)
-confusionMatrix(predictions, testing_set$Points)
-```
-
-So my trees are more accurate than simple guessing the majority class. 43.88% versus 37.24%. However that is not a huge improvement. Though here I only made use of the teams on both sides and the home/away status. Lets see if some calculated metrics can improve my predictions.
-
-```{r}
-training_set<-merge(training_set, historical_point_record, by=c("TeamName", "Opponent"))
-
-testing_set<-merge(testing_set, historical_point_record, by=c("TeamName", "Opponent"))
-
-# Get means and sd for goals for given teams to build assumption that it is a random process
-means<-tapply(training_set$Goals, training_set$TeamName, FUN=mean)
-sds<-tapply(training_set$Goals, training_set$TeamName, FUN=sd)
-goal_frame<-data.frame(cbind(rownames(sds),means, sds))
-rownames(goal_frame)<-NULL
-colnames(goal_frame)<-c("TeamName","MeanGoals","SDGoals")
-goal_frame$MeanGoals<-as.numeric(as.character(
-  goal_frame$MeanGoals))
-goal_frame$SDGoals<-as.numeric(as.character(
-  goal_frame$SDGoals))
-
-
-table(sub_data$Goals)/sum(sub_data$Goals)
-# What distribution are goals drawn from?
-# Poisson
-norm_goals<-merge(goal_frame, goal_frame, by=NULL)#, type="full")
-win_rate<-vector()
-draw_rate<-vector()
-lose_rate<-vector()
-norm_favour<-vector()
-
-for(i in 1:nrow(norm_goals)){
-  reps<-10000
-  a<-rnorm(reps, mean=norm_goals$MeanGoals.x[i], sd=norm_goals$SDGoals.x[i])
-  b<-rnorm(reps, mean=norm_goals$MeanGoals.y[i], sd=norm_goals$SDGoals.y[i])
-  sum(a<b)/reps
-  apois<-rpois(reps, lambda=norm_goals$MeanGoals.x[i])
-  bpois<-rpois(reps, lambda=norm_goals$MeanGoals.y[i])
-  norm<-sum(a<b)/reps
-  win<-sum(apois>bpois)/reps
-  draw<-sum(apois==bpois)/reps
-  lose<-sum(apois<bpois)/reps
-  
-  win_rate<-c(win_rate,win)
-  draw_rate<-c(draw_rate,draw)
-  lose_rate<-c(lose_rate, lose)
-  norm_favour<-c(norm_favour,norm)
-}
-
-norm_goals<-cbind(norm_goals,
-                  win_rate,
-                  draw_rate,
-                  lose_rate)
-colnames(norm_goals) <- c("TeamName", "MeanGoals", "SDGoals", "Opponent", "OpponentMeanGoals",
-                          "OpponentSDGoals", "WinRate", "DrawRate","LoseRate")
-
-training_set<-join(training_set, norm_goals, by=c("TeamName", "Opponent"))
-testing_set<-join(testing_set, norm_goals, by=c("TeamName", "Opponent"))
-
-# Replace messy joined names
-colnames(training_set) <- gsub('\\.(x|y)','', colnames(training_set),)
-colnames(testing_set) <- gsub('\\.(x|y)','', colnames(testing_set),)
-
-```
-Lets see how a model does on these new metrics. I fit several other trees at this point but none of them beat the 43.88% accuracy scored above. Until...
-
-```{r}
-set.seed(377199)
-#rfm = random forest model.
-# Increases accuracy to 46.94%
-rfm1 <- randomForest(Result ~ TeamName + Opponent +
-                      HistoricalPointRatio +
-                      HistoricalOpponentPointRatio +
-                      WinRate+ LoseRate + DrawRate,
-                    data=training_set, ntree=50)
-rf_pred<-predict(rfm1, testing_set)
-confusionMatrix(rf_pred, testing_set$Result)
-# Look at the relative importance of the different features in my random forest.
-rfm1$importance
-
-```
-46.94% is a nice improvement over 43.88%.
-
-Now lets try predicting using the original wide dataset and the gambling data.
-
-```{r}
-set.seed(61313)
 # I am dropping all the columns with NA values.
 wide_training_set<-cleaned_data[cleaned_data$Date<split_date, -which(colSums(is.na(cleaned_data))>0)]
 wide_testing_set<-cleaned_data[cleaned_data$Date>=split_date, -which(colSums(is.na(cleaned_data))>0)]
+
+# Target prediction values.
+truth <- wide_testing_set$FTR
+#Lets get a baseline. All guess majority class, all wins.
+base_preds <- rep(names(which.max(table(wide_training_set$FTR))), 98)
+confusionMatrix(base_preds, truth)
+
+# Guessing all home victories leads us to 42.86% accuracy
+
+tree1<-ctree(FTR~HomeTeam+AwayTeam, data=wide_training_set)
+
+plot(tree1, main="Predicting match results by Team Names")
+predictions<-predict(tree1, wide_testing_set)
+confusionMatrix(predictions, wide_testing_set$FTR)
+```
+In a naive model we assumed the majority class for all matches. All Home victories. This lead to predictive accuracy of 42.86%. Using team names alone (Home and Away) we managed to increase our predictive accuracy to 46.94%. Now lets try predicting using the original wide dataset and the gambling data.
+
+```{r}
+tree2<-ctree(FTR~., data=wide_training_set[,c(2,3,6,23:43)])
+
+plot(tree2, main="Predicting match results by Gambling data with team names.")
+predictions<-predict(tree2, wide_testing_set)
+confusionMatrix(predictions, wide_testing_set$FTR)
+# The decision tree splits on the gambling data, ignoring the team names.
+
+set.seed(61313)
 
 rfm2<- randomForest(FTR ~ .,
                     data=wide_training_set[,c(2,3,6,23:43)], ntree=101)
@@ -491,28 +401,20 @@ rfm2$importance
 rf_pred<-predict(rfm2, wide_testing_set)
 confusionMatrix(rf_pred, wide_testing_set$FTR)
 ```
-Using the wide dataset, teams and all the complete gambling data my random forest accuracy increases to 51.02%. Much better than random guessing. Though it would be difficult to profit off this data as you are attempting to use the bookies probably better predictions to predict.
+Using the wide dataset, teams and all the complete gambling data my random forest accuracy increases to 47.96%. Much better than random guessing. Though it would be difficult to profit off this insight as you are attempting to use the bookies probably better predictions to build your own prediction.
+
+# Predict using match stats
+Lets see how accurate we can get predicting with the match stats. Even though that is gonna be unusable in everyday situations. Makes for a nice tree though and a formidable 58.16% accuracy
 
 ```{r}
-party_tree<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,23:43)], controls=ctree_control(maxdepth=6))
-plot(party_tree, main="Predicting match results by Decision Tree")
-predictions<-predict(party_tree, wide_testing_set)
+tree3<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,11:43)], controls=ctree_control(maxdepth=6))
+plot(tree3, main="Predicting match results by Decision Tree")
+predictions<-predict(tree3, wide_testing_set)
 confusionMatrix(predictions, wide_testing_set$FTR)
-```
-Lets see how accurate we can get predicting with the match stats. Even though that is gonna be unusable in everyday situations. Makes for a nice tree though and 58.16% accuracy
-
-```{r}
-party_tree<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,11:43)], controls=ctree_control(maxdepth=6))
-plot(party_tree, main="Predicting match results by Decision Tree")
-predictions<-predict(party_tree, wide_testing_set)
-confusionMatrix(predictions, wide_testing_set$FTR)
-
-rfm2<- randomForest(FTR ~ .,
-                    data=wide_training_set[,c(2,3,6,11:43)], ntree=101)
 ```
 
 # Try some clusering
-Lets try some clustering. We can again use all the data here as I won't be predicting on the clusters. This is unsupervised learning rather than supervised.
+Lets try some clustering. We can again use all the data here as I won't be predicting on the clusters. This is unsupervised rather than supervised learning.
 
 # Clustering teams by win ratios
 ```{r}
@@ -524,8 +426,24 @@ table(row.names(team_point_ratios), win_clusters$cluster)
 
 d<-dist(team_point_ratios)
 hc<-hclust(d)
-#Hierarchical
 plot(hc, main="Hierarchical clustering by team point ratio performance")
+```
+The teams that join lower down the tree are more similar than the ones who join higher up. Looking at this dendrograph we see a cluster on the far left of related teams. (Chelsea, Man United, Man City and Arsenal) I would say these are groupeed as winners. Teams that tend to beat other teams. Similarly the far right teams (Wolves, Reading, QPR etc.) are the relegaters. The teams the tend toward the bottom of the league and drop in and out with relegation.
 
-  # Explore what this looks like. Heatmap does heirarchical clustering on the rows and columns.
-  heatmap(as.matrix(team_point_ratios))
+Of course this graph is treating all matches equally so more recent performance is not being weighed any way more heavily than  historic performance.
+```{r}
+# Explore what this looks like. Heatmap does heirarchical clustering on the rows and columns.
+heatmap(as.matrix(team_point_ratios))
+
+```
+# Conclusion
+
+In the above report I have explored the provided premier 
+
+DAYOFWEEK!
+
+[Github]:https://github.com/maxwbuckley/DataMiningHW2
+[ggplot2]:http://ggplot2.org/
+[R]:http://www.r-project.org/
+[RStudio]:http://www.rstudio.com/
+[RMarkdown]:http://rmarkdown.rstudio.com/
