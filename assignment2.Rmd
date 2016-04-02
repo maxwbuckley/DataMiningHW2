@@ -15,7 +15,7 @@ An interesting thing to note is I have absolutely no interest in soccer I may be
 
 #Data Cleaning
 
-```{r}
+```{r results='hide', message=F, warning=F}
 # Libraries.
 library("plyr")
 # Best plotting library ever
@@ -307,7 +307,7 @@ I found most of the bookies were in agreement when it came to the odds. These ab
 # Data modelling.
 For this section I will explore fitting some predictive models to the data. The goal will be to attempt to predict the outcome of a given match with some degree of accuracy
 ```{r}
-calculate_team_perf_pairs <- function(max_date){
+get_team_perf_ratio_matrix <- function(max_date){
   sub_data <- sub_data[sub_data$Date<max_date, ]
   cleaned_data <- cleaned_data[cleaned_data$Date<max_date, ]
   team_points <-aggregate(
@@ -315,7 +315,7 @@ calculate_team_perf_pairs <- function(max_date){
     FUN=sum)
   
   # Make a function to get the team point ratios for a given Team pair.
-  team_points_mat <-cast(team_points, Group.1~Group.2, sum)
+  team_points_mat <-cast(team_points, Group.1~Group.2, value='x', sum)
   
   team_point_ratios <-round((team_points_mat[,-1])/
                               ((table(cleaned_data$HomeTeam,
@@ -328,9 +328,12 @@ calculate_team_perf_pairs <- function(max_date){
   # Replace all  NAs with 0s.
   team_point_ratios <- replace(team_point_ratios,
                                is.na(team_point_ratios), 0)
+  return(team_point_ratios)
+  }
   
-  # Explore what this looks like. Heatmap does heirarchical clustering on the rows and columns.
-  heatmap(as.matrix(team_point_ratios))
+calculate_team_perf_pairs <- function(max_date){
+ team_point_ratios<-get_team_perf_ratio_matrix(max_date)
+
   
   # Melt the team point raios to get a historical point record.
   # A variable that tells use how well this team has done
@@ -488,7 +491,7 @@ rfm2$importance
 rf_pred<-predict(rfm2, wide_testing_set)
 confusionMatrix(rf_pred, wide_testing_set$FTR)
 ```
-Using the wide dataset, teams and all the complete gambling data my random forest accuracy increases to 51.02%
+Using the wide dataset, teams and all the complete gambling data my random forest accuracy increases to 51.02%. Much better than random guessing. Though it would be difficult to profit off this data as you are attempting to use the bookies probably better predictions to predict.
 
 ```{r}
 party_tree<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,23:43)], controls=ctree_control(maxdepth=6))
@@ -508,5 +511,21 @@ rfm2<- randomForest(FTR ~ .,
                     data=wide_training_set[,c(2,3,6,11:43)], ntree=101)
 ```
 
-Lets try some clustering.
+# Try some clusering
+Lets try some clustering. We can again use all the data here as I won't be predicting on the clusters. This is unsupervised learning rather than supervised.
 
+# Clustering teams by win ratios
+```{r}
+team_point_ratios<- get_team_perf_ratio_matrix("2017-01-01")
+
+win_clusters <- kmeans(team_point_ratios, 6)
+win_clusters$size
+table(row.names(team_point_ratios), win_clusters$cluster)
+
+d<-dist(team_point_ratios)
+hc<-hclust(d)
+#Hierarchical
+plot(hc, main="Hierarchical clustering by team point ratio performance")
+
+  # Explore what this looks like. Heatmap does heirarchical clustering on the rows and columns.
+  heatmap(as.matrix(team_point_ratios))
