@@ -7,13 +7,13 @@ output: pdf_document
 
 # Introduction
 
-In this assignment I aim to explore throughly the provided dataset of Premier League soccer matches. From the brief the objective is:
+In this assignment I aim to explore thoroughly the provided dataset of Premier League soccer matches. From the brief the objective is:
 
 >Your task is to analyse Premier League match data provided since 2010 up to and including last weekend (6 March 2016). You should attempt to uncover interesting and potentially useful patterns and rules which might be used to determine the outcome of the remaining matches in the 2016 league.
 
-I will break my analysis into its logical steps so that I start with data cleaning and preperation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducable research. I did a fair bit more exploring and playing with models. However this document is long enough at twenty plus pages. If you are interested you can take a look at the lot and the revisions in my [Github] repository.
+I will break my analysis into its logical steps so that I start with data cleaning and preparation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducible research. I did a fair bit more exploring and playing with models. However this document is long enough at twenty plus pages. If you are interested you can take a look at the lot and the revisions in my [Github] repository.
 
-An interesting thing to note is I have absolutely no interest in soccer I may be unaware of or ask naive questions of the data vis-a-vis the soccer afficianados in the class.
+An interesting thing to note is I have absolutely no interest in soccer. I may be unaware of or ask naive questions of the data vis-a-vis the soccer aficionados in the class.
 
 # Tools
 For this assignment I will be using the statistical programming language [R]. I will be using the [ggplot2] plotting library and rendering the whole thing using [RStudio] and [RMarkdown].
@@ -97,7 +97,7 @@ cleaned_data$TotalGoals <-cleaned_data$FTHG + cleaned_data$FTAG
 save(cleaned_data, file = paste0(output_dir, "/",
                                  "cleaned_data.Rda"))
 ```
-With some of my data preprocessing I now had a better idea of what my data source looks like and how it is strucutred.
+With some of my data preprocessing I now had a better idea of what my data source looks like and how it is structured.
 
 Given the dataset is currently in wide form and quite difficult to work with I decided to switch it to long form. So rather than having the winner and loser in one row I would have one row for each side and I could then more easily aggregate it.
 
@@ -177,7 +177,7 @@ This long form data will be more useful for prediction in some instances. Now I 
 
 # Data Exploration
 ## Who are the best teams?
-Naively one would assume that the match result and teams playing would appear to be the most imortant factors. So a question to ask is which teams are the best historically and how are these different teams doing?
+Naively one would assume that the match result and teams playing would appear to be the most important factors. So a question to ask is which teams are the best historically and how are these different teams doing?
 
 ```{r message=FALSE, warning=FALSE}
 # Take another subset
@@ -221,7 +221,8 @@ p + geom_path(alpha=1)+ labs(title= "Team Rank by Season") +
   guides(colour=guide_legend(ncol=2))
 
 ```
-From this, improved chart we can more clearly see that team performance is pertty volatile and hence more difficult predict. Teams can move up and down the leaderboard year to year. We see a lot of the teams at the top of the chart tend to be discontinuos as they get relegated due to poor performance. Thugh it would probably be digest this data in tabular form.
+
+From this, improved chart we can more clearly see that team performance is pretty volatile, and hence more difficult to predict. Teams can move up and down the leaderboard year to year. We see a lot of the teams at the top of the chart tend to be discontinuous as they get relegated due to poor performance. Though it would probably be easier to digest this data in tabular form. As I show here.
 
 ```{r}
 # Look at trends over time
@@ -245,7 +246,7 @@ prop.table(table(cleaned_data$FTR))
 # There is a statistical difference between
 t.test(cleaned_data$FTHG, cleaned_data$FTAG, paired=TRUE)
 ```
-It seems my soccer loving friends were correct there seems to be a large difference between home and away performances in favour of home. Home victories are ~50% more likely than away victories.
+It seems my soccer loving friends were correct there seems to be a large difference between home and away performances in favor of home. Home victories are ~50% more likely than away victories.
 
 ```{r}
 # Plot the relationship between home and away goals
@@ -264,7 +265,7 @@ p + geom_boxplot()
 table(cleaned_data$WeekDay)
 
 # Why does home advantage appear biggest on a Saturday? More home attendees?
-# We also have the most obserations on Saturdays so should be more certain
+# We also have the most observations on Saturdays so should be more certain
 # of our estimate.
 tapply(cleaned_data$HomePoints, cleaned_data$WeekDay, FUN=mean) -
   tapply(cleaned_data$AwayPoints, cleaned_data$WeekDay, FUN=mean)
@@ -288,11 +289,11 @@ There appears to be no relationship between total goals and referee. Which is pr
 
 ## Half time vs. Full time.
 ```{r}
-# Relationship betwen half time result and full time result.
+# Relationship between half time result and full time result.
 prop.table(table(cleaned_data$FTR, cleaned_data$HTR),2)
 ```
 
-Unsurprisingly the half time result is a super strong predictor of the full time result. But it wouldn' be a very good predictive model if we got to use that. As it would imply we were predicting at the half time whistle.
+Unsurprisingly the half time result is a super strong predictor of the full time result. But it wouldn't be a very good predictive model if we got to use that. As it would imply we were predicting at the half time whistle.
 
 ## Match Statistics.
 While the match statistics are very interesting I didn't explore them too much as they wouldn't be of huge use in predicting match results in advance. However here are some of my observations.
@@ -305,9 +306,9 @@ p + geom_point() + geom_smooth(method = "lm", se = FALSE) +
 summary(lm(cleaned_data$FTHG~cleaned_data$HS ))
 
 # Score drivers
-# 2,3 are team names
-match_stats<-cleaned_data[,colnames(cleaned_data)[c(2,3,4,5,11:22)]]
-cor(match_stats[,-c(1,2)])
+# 2, 3 are team names
+match_stats<-cleaned_data[,colnames(cleaned_data)[c(2,3,4,5, 11:22)]]
+cor(match_stats[, -c(1,2)])
 ```
 
 There are some pretty strong correlations in here which is unsurprising. As you can't have a goal without a shot on target and you can't have a shot on target without a shot, etc...
@@ -360,7 +361,7 @@ calculate_team_perf_pairs <- function(max_date){
  team_point_ratios<-get_team_perf_ratio_matrix(max_date)
 
   
-  # Melt the team point raios to get a historical point record.
+  # Melt the team point ratios to get a historical point record.
   # A variable that tells use how well this team has done
   # against this opponent.
   historical_point_record<-melt(cbind(row.names(
@@ -393,12 +394,11 @@ wide_testing_set<-cleaned_data[cleaned_data$Date>=split_date,
 
 # Target prediction values.
 truth <- wide_testing_set$FTR
-#Lets get a baseline. All guess majority class, all wins.
+# Generate a baseline. All guess majority class, all wins.
 base_preds <- rep(names(which.max(table(wide_training_set$FTR))), 98)
 confusionMatrix(base_preds, truth)
 
 # Guessing all home victories leads us to 42.86% accuracy
-
 tree1<-ctree(FTR~HomeTeam+AwayTeam, data=wide_training_set)
 
 plot(tree1, main="Predicting match results by Team Names")
@@ -427,7 +427,7 @@ confusionMatrix(rf_pred, wide_testing_set$FTR)
 Using the wide dataset, teams and all the complete gambling data my random forest accuracy increases to 47.96%. Much better than random guessing. Though it would be difficult to profit off this insight as you are attempting to use the bookies probably better predictions to build your own prediction.
 
 # Predict using match stats
-Lets see how accurate we can get predicting with the match stats. Even though that is gonna be unusable in everyday situations. Makes for a nice tree though and a formidable 58.16% accuracy
+Investigate how accurate we can be when predicting with the match stats. Even though that will be unusable in everyday situations. It makes for a nice tree though and a formidable 58.16% accuracy
 
 ```{r}
 tree3<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,11:43)],
@@ -437,34 +437,83 @@ predictions<-predict(tree3, wide_testing_set)
 confusionMatrix(predictions, wide_testing_set$FTR)
 ```
 
-# Try some clusering
+# Try some clustering
 Lets try some clustering. We can again use all the data here as I won't be predicting on the clusters. This is unsupervised rather than supervised learning.
 
-# Clustering teams by win ratios
+# Hierarchical Clustering teams by win ratios
 ```{r}
 team_point_ratios<- get_team_perf_ratio_matrix("2017-01-01")
-
-win_clusters <- kmeans(team_point_ratios, 6)
-win_clusters$size
-table(row.names(team_point_ratios), win_clusters$cluster)
 
 d<-dist(team_point_ratios)
 hc<-hclust(d)
 plot(hc, main="Hierarchical clustering by team point ratio performance")
 ```
-The teams that join lower down the tree are more similar than the ones who join higher up. Looking at this dendrograph we see a cluster on the far left of related teams. (Chelsea, Man United, Man City and Arsenal) I would say these are groupeed as winners. Teams that tend to beat other teams. Similarly the far right teams (Wolves, Reading, QPR etc.) are the relegaters. The teams the tend toward the bottom of the league and drop in and out with relegation.
+The teams that join lower down the tree are more similar than the ones who join higher up. Looking at this dendrograph we see a cluster on the far left of related teams. (Chelsea, Man United, Man City and Arsenal) I would say these are grouped as winners. Teams that tend to beat other teams. Similarly the far right teams (Wolves, Reading, QPR etc.) are the relegaters. The teams the tend toward the bottom of the league and drop in and out with relegation.
 
 Of course this graph is treating all matches equally so more recent performance is not being weighed any way more heavily than  historic performance.
 ```{r}
-# Explore what this looks like. Heatmap does heirarchical clustering
+# Explore what this looks like. Heatmap does hierarchical clustering
 # on the rows and columns.
 heatmap(as.matrix(team_point_ratios))
 
 ```
 
+# Centroid based clustering
+Use k means to cluster matches based on the activity in the matches. Given my input dataset is 15 dimensional and I want to plot it. I use principle component analysis to reduced the dataset to its two most significant components. I do this just so I can generate a visual representation of the data. Interestingly, even though I reduce the data from 15 to 2 columns I maintain 34% of the variance.
+
+```{r}
+match_stat_cols<-c(4,5,7,8,11:22)
+match_stats<-cleaned_data[,match_stat_cols]
+
+# This is an entirely numeric dataset
+
+match_clusters <- kmeans(match_stats, 6)
+# Check the size of my clusters. Are they all approximately the same sizes.
+match_clusters$size
+
+#Examine their centers.
+match_clusters$center
+
+# Look at the proportion of outcomes by cluster.
+prop.table(table(cleaned_data$FTR, match_clusters$cluster),2)
+
+# Use PCA to reduce dimensionality for plotting to demo my clusters
+pca<-princomp(match_stats<-cleaned_data[,match_stat_cols])
+
+# First two components of my PCA match results represent 34% of the variance.
+sum(pca$sdev[1:2])/sum(pca$sdev)
+
+
+cluster_frame <- data.frame(pca$scores[,1:2])
+cluster_frame$Cluster <- as.factor(match_clusters$cluster)   
+       
+p <- ggplot(cluster_frame, aes(Comp.1, Comp.2, colour=Cluster))
+p + geom_point() + labs(title = "Demonstrate clustering visually on PCA data")
+```
+
 #Conclusion
 
-In the above report I have explored the provided premier league data. TBC.
+In the above report I have thoroughly explored the provided premier league data. I have fit some models and attempted to predict future match results. To summarize some of what I found:
+
+## Classification
+* Home victory is the most likely outcome of a match. So is a sensible guess if you have no additional information. 42.86% accuracy
+* Involving the team names playing home and away allows us to capitalize on some sort of structure, strong teams and weak teams. Improving our predictive accuracy to  46.94%
+* Using the gambling data was superior again. When allowed to use ~20 columns of gambling data and the team names the model used only the Betbrain data but improved accuracy to 47.96%. Using a random forest on the same data  improved the fit even further to 48.98%
+* Use of the match stats in addition to the gambling data made for my most accurate model at 58.16%. However this would be a contradictory model as you would have to be predicting the full time result with all the match stats and yet not know the actual result.
+
+## Clustering
+* Used hierarchical clustering to cluster teams based on win ratios against specific teams. Found strong team cluster and relegaters.
+* Used k-means to clustering to cluster matches based on their match stats into similar matches. Demoed the centroid based clustering visually.
+
+## Further research.
+It would always be interesting to have more data. Although here we had a lot of columns of data a large amount of it was highly correlated. For example all of the gambling data.
+
+Things like:
+* Team financials if they are available from balance sheets etc. 
+* Time of day of matches.
+* Player stats. Injuries would be especially useful.
+* Attendance at matches.
+* Match ticket prices.
 
 [Github]:https://github.com/maxwbuckley/DataMiningHW2
 [ggplot2]:http://ggplot2.org/
