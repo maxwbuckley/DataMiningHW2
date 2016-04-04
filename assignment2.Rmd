@@ -11,7 +11,7 @@ In this assignment I aim to explore thoroughly the provided dataset of Premier L
 
 >Your task is to analyse Premier League match data provided since 2010 up to and including last weekend (6 March 2016). You should attempt to uncover interesting and potentially useful patterns and rules which might be used to determine the outcome of the remaining matches in the 2016 league.
 
-I will break my analysis into its logical steps so that I start with data cleaning and preparation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducible research. I did a fair bit more exploring and playing with models. However this document is long enough at twenty plus pages. If you are interested you can take a look at the lot and the revisions in my [Github] repository.
+I will break my analysis into its logical steps so that I start with data cleaning and preparation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducible research. I did a fair bit more exploring and playing with models. However this document is long enough at twenty plus pages. If you are interested you can take a look at all the code and the revisions in my [Github] repository.
 
 An interesting thing to note is I have absolutely no interest in soccer. I may be unaware of or ask naive questions of the data vis-a-vis the soccer aficionados in the class.
 
@@ -324,6 +324,7 @@ p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 p <- ggplot(cleaned_data, aes(VCH, WHH))
 p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 ```
+
 As expected, I found most of the bookies were in agreement when it came to the odds. These above plots show the very strong correlations.
 
 # Data modelling.
@@ -448,6 +449,7 @@ d<-dist(team_point_ratios)
 hc<-hclust(d)
 plot(hc, main="Hierarchical clustering by team point ratio performance")
 ```
+
 The teams that join lower down the tree are more similar than the ones who join higher up. Looking at this dendrograph we see a cluster on the far left of related teams. (Chelsea, Man United, Man City and Arsenal) I would say these are grouped as winners. Teams that tend to beat other teams. Similarly the far right teams (Wolves, Reading, QPR etc.) are the relegaters. The teams the tend toward the bottom of the league and drop in and out with relegation.
 
 Of course this graph is treating all matches equally so more recent performance is not being weighed any way more heavily than  historic performance.
@@ -467,7 +469,7 @@ match_stats<-cleaned_data[,match_stat_cols]
 
 # This is an entirely numeric dataset
 
-match_clusters <- kmeans(match_stats, 6)
+match_clusters <- kmeans(match_stats, 5)
 # Check the size of my clusters. Are they all approximately the same sizes.
 match_clusters$size
 
@@ -491,7 +493,11 @@ p <- ggplot(cluster_frame, aes(Comp.1, Comp.2, colour=Cluster))
 p + geom_point() + labs(title = "Demonstrate clustering visually on PCA data")
 ```
 
-#Conclusion
+All my clusters are of sufficient size, between 312 and 566 matches. Also we can see visually in our 2 dimensional representation that the clusters are linearly seperable which is a property of centroid based (spatial) clustering. We could draw lines between the different clustered points.
+
+Examing our clusters we find that in cluster 5 we see that 'Away' results are the most common with ~47% of the results which is unusual given 'Away' results are less common in general. Similarly in cluser 4 'Home' victory are much more frequent at ~63%
+
+# Conclusion
 
 In the above report I have thoroughly explored the provided premier league data. I have fit some models and attempted to predict future match results. To summarize some of what I found:
 
@@ -508,7 +514,7 @@ In the above report I have thoroughly explored the provided premier league data.
 ## Further research.
 It would always be interesting to have more data. Although here we had a lot of columns of data a large amount of it was highly correlated. For example all of the gambling data.
 
-Things like:
+###Things like:
 * Team financials if they are available from balance sheets etc. 
 * Time of day of matches.
 * Player stats. Injuries would be especially useful.
