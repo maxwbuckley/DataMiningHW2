@@ -1,6 +1,6 @@
 ---
 title: 'Data Mining Homework 2: Premier League'
-author: "Max Buckley"
+author: "Max Buckley 15203431"
 date: "02/04/2016"
 output: pdf_document
 ---
@@ -13,7 +13,7 @@ In this assignment I aim to explore thoroughly the provided dataset of Premier L
 
 I will break my analysis into its logical steps so that I start with data cleaning and preparation, progress to data exploration, and then lastly attempt data modelling and some prediction. I will include all my code in the interests of reproducible research. I did a fair bit more exploring and playing with models. However this document is long enough at twenty plus pages. If you are interested you can take a look at all the code and the revisions in my [Github] repository.
 
-An interesting thing to note is I have absolutely no interest in soccer. I may be unaware of or ask naive questions of the data vis-a-vis the soccer aficionados in the class.
+An interesting thing to note is I have absolutely no interest in soccer. I may be unaware of, or ask naive questions of the data vis-a-vis the soccer aficionados in the class.
 
 # Tools
 For this assignment I will be using the statistical programming language [R]. I will be using the [ggplot2] plotting library and rendering the whole thing using [RStudio] and [RMarkdown].
@@ -25,9 +25,7 @@ For this assignment I will be using the statistical programming language [R]. I 
 library("ggplot2")
 # For data munging
 library("reshape")
-# More data munging
 library("reshape2")
-# Same
 library("plyr")
 # Recursive Partitioning decision trees
 library("rpart")
@@ -74,6 +72,7 @@ cleaned_data$HTR <- as.factor(cleaned_data$HTR)
 cleaned_data$HomeTeam <- as.factor(cleaned_data$HomeTeam)
 cleaned_data$AwayTeam <- as.factor(cleaned_data$AwayTeam)
 cleaned_data$Referee <- as.factor(cleaned_data$Referee)
+#Use a regular expression to shorten my season variable.
 cleaned_data$Season <- as.factor(gsub("20(\\d+)_(\\d+)","\\1/\\2",
                                       cleaned_data$Season,))
 cleaned_data$WeekDay<-wday(cleaned_data$Date, label=TRUE)
@@ -97,16 +96,12 @@ cleaned_data$TotalGoals <-cleaned_data$FTHG + cleaned_data$FTAG
 save(cleaned_data, file = paste0(output_dir, "/",
                                  "cleaned_data.Rda"))
 ```
-With some of my data preprocessing I now had a better idea of what my data source looks like and how it is structured.
+With some of my data preprocessing complete, I now had a better idea of what my data source looks like and how it is structured.
 
 Given the dataset is currently in wide form and quite difficult to work with I decided to switch it to long form. So rather than having the winner and loser in one row I would have one row for each side and I could then more easily aggregate it.
 
 ```{r message=FALSE, warning=FALSE}
 options(stringsAsFactors=FALSE)
-
-# Clear R environment.
-rm(list=ls())
-
 #This will be used to avoid some division by zero errors later.
 ratio_offset<-1e-6
 
@@ -173,11 +168,11 @@ sub_data <- get_long_data()
 head(sub_data[,-c(2:4)])
 ```
 
-This long form data will be more useful for prediction in some instances. Now I can predict win/lose/draw for teams rather than say home/away/draw which would have been confounded by the fact that a given team can be either home or away. An important thing to note is there is now 2 rows per match. One row for the home team and one for the away team. Another benefit of this new structure is that I can now aggregate it. Summing the points for a given team easily.
+This long form data will be easier for aggregating and may be of use for prediction in some instances. With a long form dataset one can predict win/lose/draw for teams rather than say home/away/draw which would have been confounded by the fact that a given team can be either home or away. An important thing to note is there is now 2 rows per match. One row for the home team and one for the away team.
 
 # Data Exploration
 ## Who are the best teams?
-Naively one would assume that the match result and teams playing would appear to be the most important factors. So a question to ask is which teams are the best historically and how are these different teams doing?
+Naively, one would assume that the match result and teams playing would appear to be the most important factors. So a question to ask is which teams are the best historically and how are these different teams doing?
 
 ```{r message=FALSE, warning=FALSE}
 # Take another subset
@@ -222,7 +217,7 @@ p + geom_path(alpha=1)+ labs(title= "Team Rank by Season") +
 
 ```
 
-From this, improved chart we can more clearly see that team performance is pretty volatile, and hence more difficult to predict. Teams can move up and down the leaderboard year to year. We see a lot of the teams at the top of the chart tend to be discontinuous as they get relegated due to poor performance. Though it would probably be easier to digest this data in tabular form. As I show here.
+From this, improved chart we can more clearly see that team performance is pretty volatile, and hence will be more difficult to predict. Teams can move up and down the leader board year to year. We see a lot of the teams at the top of the chart (Rank 15 to 20) appear to be discontinuous as they get relegated due to poor performance. It would probably be easier to digest this data in tabular form. As I show below here. The NaN values represent years in which that team did not participate.
 
 ```{r}
 # Look at trends over time
@@ -230,12 +225,11 @@ rank_by_season <- cast(sum_mat, TeamName ~Season, mean,   value='Rank')
 rank_by_season
 ```
 
-The table at the bottom makes this a little easier to see. The NaN values represent years in which that team did not participate.
-
 Now that I have some idea of what teams are doing well my next exploratory questions are to look at if there are any other interesting relationships in the data.
 
 ## Home and Away
 Does it make a difference when you are home or away?
+
 ```{r}
 # How many points on average do you get for a home or away match?
 tapply(sub_data$Points, sub_data$HomeOrAway, FUN=mean)
@@ -246,13 +240,15 @@ prop.table(table(cleaned_data$FTR))
 # There is a statistical difference between
 t.test(cleaned_data$FTHG, cleaned_data$FTAG, paired=TRUE)
 ```
-It seems my soccer loving friends were correct there seems to be a large difference between home and away performances in favor of home. Home victories are ~50% more likely than away victories.
+
+It seems my soccer loving friends were correct, there seems to be a large difference between home and away performances in favor of home. Home victories are ~50% more likely than away victories.
 
 ```{r}
 # Plot the relationship between home and away goals
 p <- ggplot(cleaned_data, aes(FTAG, FTHG))
 p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 ```
+
 ## Day of the week
 It would be interesting to see if performance changes as a function of day of the week. Above in data cleaning I added a variable weekday. So here I will explore it.
 
@@ -271,7 +267,7 @@ tapply(cleaned_data$HomePoints, cleaned_data$WeekDay, FUN=mean) -
   tapply(cleaned_data$AwayPoints, cleaned_data$WeekDay, FUN=mean)
 
 ```
-We don't see many matches on Thursdays or Fridays.
+We don't see many matches on Thursdays or Fridays. Interesting that the home advantage in terms of points difference is largest on a Saturday. Biggest match attendance perhaps?
 
 ## Referees
 ```{r}
@@ -293,7 +289,7 @@ There appears to be no relationship between total goals and referee. Which is pr
 prop.table(table(cleaned_data$FTR, cleaned_data$HTR),2)
 ```
 
-Unsurprisingly the half time result is a super strong predictor of the full time result. But it wouldn't be a very good predictive model if we got to use that. As it would imply we were predicting at the half time whistle.
+Unsurprisingly the half time result is a super strong predictor of the full time result. But it wouldn't be a very good predictive model if we got to make use of that fact. As it would imply we were predicting at the half time whistle.
 
 ## Match Statistics.
 While the match statistics are very interesting I didn't explore them too much as they wouldn't be of huge use in predicting match results in advance. However here are some of my observations.
@@ -328,12 +324,12 @@ p + geom_point() + geom_smooth(method = "lm", se = FALSE)
 As expected, I found most of the bookies were in agreement when it came to the odds. These above plots show the very strong correlations.
 
 # Data modelling.
-For this section I will explore fitting some predictive models to the data. The goal will be to attempt to predict the outcome of a given match with some degree of accuracy. To do this I will try fitting some simple models. Then try to derive some more interesting calculated metrics from the data and see if they work.
+For this section I will explore fitting some predictive models to the data. The goal will be to attempt to predict the outcome of a given match with some degree of accuracy. To do this I will try fitting some simple models. Then try to derive some more interesting calculated metrics from the data and see if they work. As mentioned in the opening section I actually did a lot more work in this section which didn't make it into this document for length reasons. I tried with less success predicting on my long form dataset, tried other models. Clustered on some other dimensions. Added a good few calculated metrics. Much of it lead to sub par results, but the exercise was interesting.
 
-I will then trying fitting some more complex models and see if I can improve my predictions. The objective here is demonstration rather than accuracy so I will not be tuning and optimizing models but rather fitting them out of the box.
+I will then trying fitting some more complex models and see if I can improve my predictions. The objective here is demonstration rather than accuracy so I will not be tuning and optimizing models but rather fitting them out of the box. As my baseline model I will be predicting the training set majority class for all matches in the test set. Which in this case is all wins.
 
 I will use all the data up to end of 2015 as my training set and I will use 2016 data to date as my testing set.
-```{r}
+```{r warning=FALSE, message=FALSE}
 get_team_perf_ratio_matrix <- function(max_date){
   sub_data <- sub_data[sub_data$Date<max_date, ]
   cleaned_data <- cleaned_data[cleaned_data$Date<max_date, ]
@@ -393,20 +389,26 @@ wide_training_set<-cleaned_data[cleaned_data$Date<split_date,
 wide_testing_set<-cleaned_data[cleaned_data$Date>=split_date,
                                -which(colSums(is.na(cleaned_data))>0)]
 
-# Target prediction values.
-truth <- wide_testing_set$FTR
 # Generate a baseline. All guess majority class, all wins.
-base_preds <- rep(names(which.max(table(wide_training_set$FTR))), 98)
-confusionMatrix(base_preds, truth)
+preds <- rep(names(which.max(table(wide_training_set$FTR))), 98)
+confusionMatrix(preds, wide_testing_set$FTR)
+```
 
-# Guessing all home victories leads us to 42.86% accuracy
+Our baseline model of guessing all home victories leads us to 42.86% accuracy. Lets see if we can do better.
+
+
+```{r}
 tree1<-ctree(FTR~HomeTeam+AwayTeam, data=wide_training_set)
 
 plot(tree1, main="Predicting match results by Team Names")
 predictions<-predict(tree1, wide_testing_set)
 confusionMatrix(predictions, wide_testing_set$FTR)
 ```
-In a naive model we assumed the majority class for all matches. All Home victories. This lead to predictive accuracy of 42.86%. Using team names alone (Home and Away) we managed to increase our predictive accuracy to 46.94%. Now lets try predicting using the original wide dataset and the gambling data.
+
+Using team names alone (Home and Away) we managed to increase our predictive accuracy to 46.94%. Interpreting our model it appears to be splitting based on strong/weak teams. For example the top split includes a few of the top performing teams(Man Utd, Chelsea, etc.)
+
+
+Now lets try predicting using the original wide dataset and the gambling data.
 
 ```{r}
 tree2<-ctree(FTR~., data=wide_training_set[,c(2,3,6,23:43)])
@@ -414,21 +416,27 @@ tree2<-ctree(FTR~., data=wide_training_set[,c(2,3,6,23:43)])
 plot(tree2, main="Predicting match results by Gambling data with team names.")
 predictions<-predict(tree2, wide_testing_set)
 confusionMatrix(predictions, wide_testing_set$FTR)
-# The decision tree splits on the gambling data, ignoring the team names.
+# The decision tree splits on the gambling data, ignoring the team names. 
+```
 
+Using the wide dataset, teams and all the complete gambling data my tree accuracy increases to 47.96%. Interestingly with the gambling data included, my model no longer makes use of the team names. This must already be captured in the underlying gambling odds.
+
+
+```{r}
 set.seed(61313)
 
 rfm2<- randomForest(FTR ~ .,
                     data=wide_training_set[,c(2,3,6,23:43)], ntree=101)
 
+# You can print off and see what variables gave the random forest the most information
 rfm2$importance
 rf_pred<-predict(rfm2, wide_testing_set)
 confusionMatrix(rf_pred, wide_testing_set$FTR)
 ```
-Using the wide dataset, teams and all the complete gambling data my random forest accuracy increases to 47.96%. Much better than random guessing. Though it would be difficult to profit off this insight as you are attempting to use the bookies probably better predictions to build your own prediction.
+A Random Forest based on the same data did even better at 48.98%. Much better than random guessing. Though it would be difficult to financially profit off this insight as you are attempting to use the bookies probably better predictions to build your own prediction.
 
 # Predict using match stats
-Investigate how accurate we can be when predicting with the match stats. Even though that will be unusable in everyday situations. It makes for a nice tree though and a formidable 58.16% accuracy
+Lets investigate how accurate we can be when predicting with the match stats. Even though that will be unusable in everyday situations. It makes for a nice tree though and a formidable 58.16% accuracy
 
 ```{r}
 tree3<-ctree(FTR ~ ., data=wide_training_set[,c(2,3,6,11:43)],
@@ -437,6 +445,8 @@ plot(tree3, main="Predicting match results by Decision Tree")
 predictions<-predict(tree3, wide_testing_set)
 confusionMatrix(predictions, wide_testing_set$FTR)
 ```
+
+It is telling that even when we have all the stats for a match, the shots, red cards, corners we are only 58% accurate.
 
 # Try some clustering
 Lets try some clustering. We can again use all the data here as I won't be predicting on the clusters. This is unsupervised rather than supervised learning.
@@ -460,8 +470,10 @@ heatmap(as.matrix(team_point_ratios))
 
 ```
 
+The consistently colored square in the middle, right of the graph are the empty combinations. The team pairs that never played each other due to not being in the league in the same year.
+
 # Centroid based clustering
-Use k means to cluster matches based on the activity in the matches. Given my input dataset is 15 dimensional and I want to plot it. I use principle component analysis to reduced the dataset to its two most significant components. I do this just so I can generate a visual representation of the data. Interestingly, even though I reduce the data from 15 to 2 columns I maintain 34% of the variance.
+Now I will use k means to cluster matches based on the activity in the matches. Given my input dataset is 15 dimensional and I want to plot it. I use a technique called principle component analysis to reduced the dataset to its two most significant components. I do this just so I can generate a visual representation of the data. Interestingly, even though I reduce the data from 15 to 2 columns I maintain 34% of the variance.
 
 ```{r}
 match_stat_cols<-c(4,5,7,8,11:22)
@@ -493,9 +505,9 @@ p <- ggplot(cluster_frame, aes(Comp.1, Comp.2, colour=Cluster))
 p + geom_point() + labs(title = "Demonstrate clustering visually on PCA data")
 ```
 
-All my clusters are of sufficient size, between 312 and 566 matches. Also we can see visually in our 2 dimensional representation that the clusters are linearly seperable which is a property of centroid based (spatial) clustering. We could draw lines between the different clustered points.
+All my clusters are of sufficient size, between 313 and 566 matches. Also we can see visually in our 2 dimensional representation that the clusters are linearly separable which is a property of centroid based (spatial) clustering. We could draw lines between the different clustered points.
 
-Examing our clusters we find that in cluster 5 we see that 'Away' results are the most common with ~47% of the results which is unusual given 'Away' results are less common in general. Similarly in cluser 4 'Home' victory are much more frequent at ~63%
+Examining our clusters we find that in cluster 5 we see that 'Away' results are the most common with ~47% of the results which is unusual given 'Away' results are less common in general. Similarly in cluster 4 'Home' victory are much more frequent at ~63%
 
 # Conclusion
 
